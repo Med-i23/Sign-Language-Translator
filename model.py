@@ -8,8 +8,6 @@ from keras.src.models import Sequential
 from keras.src.layers import Dense, Conv2D, Flatten , Dropout , BatchNormalization
 from keras.src.layers.pooling.max_pooling2d import MaxPooling2D
 from keras.src.legacy.preprocessing.image import ImageDataGenerator
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import classification_report,confusion_matrix
 from keras.src.callbacks import ReduceLROnPlateau
 from sklearn.preprocessing import LabelBinarizer
 
@@ -20,7 +18,6 @@ y_train = train_df['label']
 y_test = test_df['label']
 del train_df['label']
 del test_df['label']
-
 
 # Binarizing for multi-class classification
 label_binarizer = LabelBinarizer()
