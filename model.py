@@ -38,10 +38,11 @@ datagen = ImageDataGenerator(
         featurewise_std_normalization=False,  # divide inputs by std of the dataset
         samplewise_std_normalization=False,  # divide each input by its std
         zca_whitening=False,  # apply ZCA whitening
-        rotation_range=10,  # randomly rotate images in the range (degrees, 0 to 180)
+        rotation_range=15,  # randomly rotate images in the range (degrees, 0 to 180)
         zoom_range = 0.1, # Randomly zoom image
         width_shift_range=0.1,  # randomly shift images horizontally (fraction of total width)
-        height_shift_range=0.1,  # randomly shift images vertically (fraction of total height)
+        height_shift_range=0.1, # randomly shift images vertically (fraction of total height)
+        brightness_range=[0.8, 1.2],  # brightness adjusting
         horizontal_flip=False,  # randomly flip images
         vertical_flip=False)  # randomly flip images
 
@@ -50,32 +51,43 @@ datagen.fit(x_train)
 learning_rate_reduction = ReduceLROnPlateau(monitor='val_accuracy', patience = 2, verbose=1,factor=0.5, min_lr=0.00001)
 
 # Convolution
-# Building to model from keras.model
 model = Sequential()
 
 # First convolutional layer
-model.add(Conv2D(75 , (3,3) , strides = 1 , padding = 'same' , activation = 'relu' , input_shape = (28,28,1)))
+model.add(Conv2D(64, (3, 3), padding='same', activation='relu', input_shape=(28, 28, 1)))
 model.add(BatchNormalization())
-model.add(MaxPooling2D((2,2) , strides = 2 , padding = 'same'))
+model.add(MaxPooling2D((2, 2), padding='same'))
 
 # Second convolutional layer
-model.add(Conv2D(50 , (3,3) , strides = 1 , padding = 'same' , activation = 'relu'))
-model.add(Dropout(0.2))
+model.add(Conv2D(128, (3, 3), padding='same', activation='relu'))
 model.add(BatchNormalization())
-model.add(MaxPooling2D((2,2) , strides = 2 , padding = 'same'))
+model.add(MaxPooling2D((2, 2), padding='same'))
 
 # Third convolutional layer
-model.add(Conv2D(25 , (3,3) , strides = 1 , padding = 'same' , activation = 'relu'))
+model.add(Conv2D(256, (3, 3), padding='same', activation='relu'))
 model.add(BatchNormalization())
-model.add(MaxPooling2D((2,2) , strides = 2 , padding = 'same'))
+model.add(MaxPooling2D((2, 2), padding='same'))
+
+# Fourth convolutional layer
+model.add(Conv2D(512, (3, 3), padding='same', activation='relu'))
+model.add(BatchNormalization())
+model.add(MaxPooling2D((2, 2), padding='same'))
 
 # Flattening from 3D to 1D
 model.add(Flatten())
 
-model.add(Dense(units = 512 , activation = 'relu'))
-model.add(Dropout(0.3))
+# First dense layer
+model.add(Dense(512, activation='relu'))
+model.add(Dropout(0.4))
+
+# Second dense layer
+model.add(Dense(256, activation='relu'))
+model.add(Dropout(0.4))
+
 model.add(Dense(units = 24 , activation = 'softmax'))
+
 model.compile(optimizer = 'adam' , loss = 'categorical_crossentropy' , metrics = ['accuracy'])
+
 model.summary()
 
 # Train to model
@@ -85,3 +97,4 @@ history = model.fit(datagen.flow(x_train,y_train, batch_size = 128) ,epochs = 20
 model.save('models/smnist.keras')
 
 print("Accuracy of the model is - " , model.evaluate(x_test,y_test)[1]*100 , "%")
+
