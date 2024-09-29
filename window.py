@@ -1,5 +1,6 @@
 import os
 import tkinter as tk
+from tkinter import ttk
 from tkinter import messagebox
 from PIL import Image, ImageTk
 import cv2 as cv
@@ -48,8 +49,8 @@ class App(tk.Tk):
         )
 
         self.cap = cv.VideoCapture(0)
-        self.video_width = 400
-        self.video_height = 300
+        self.video_width = 800
+        self.video_height = 600
 
         # Loading model
         self.model = load_model("models/smnist.keras")
@@ -79,27 +80,21 @@ class App(tk.Tk):
                     y_min, y_max = y_min - 20, y_max + 20
                     x_min, x_max = x_min - 20, x_max + 20
 
-                # Preprocess frame for model input
                 analysisframe = cv.cvtColor(analysisframe, cv.COLOR_BGR2GRAY)
                 analysisframe = analysisframe[y_min:y_max, x_min:x_max]
                 analysisframe = cv.resize(analysisframe, (28, 28))
 
-                # Prepare input data
                 pixeldata = np.array(analysisframe).reshape(-1, 28, 28, 1) / 255.0
                 prediction = self.model.predict(pixeldata)
 
-                # Parse predictions
                 predarray = np.array(prediction[0])
                 letter_prediction_dict = {self.letterpred[i]: predarray[i] for i in range(len(self.letterpred))}
 
-                # Find the highest predicted letter and its confidence
                 top_letter = max(letter_prediction_dict, key=letter_prediction_dict.get)
                 top_confidence = letter_prediction_dict[top_letter]
 
-                # Display the top prediction
                 self.status_bar.config(text=f"Prediction: {top_letter}, Confidence: {100 * top_confidence:.2f}%")
 
-                # Top 3 predictions
                 predarrayordered = sorted(predarray, reverse=True)
                 high1, high2, high3 = predarrayordered[:3]
                 for key, value in letter_prediction_dict.items():
@@ -116,7 +111,6 @@ class App(tk.Tk):
             frame = cv.cvtColor(frame, cv.COLOR_BGR2RGB)
             frame = cv.resize(frame, (self.video_width, self.video_height))
 
-            # Detect hands
             hands_detected = self.hands.process(frame)
             if hands_detected.multi_hand_landmarks:
                 h, w, _ = frame.shape
@@ -130,7 +124,6 @@ class App(tk.Tk):
                     y_min, y_max = y_min - 20, y_max + 20
                     x_min, x_max = x_min - 20, x_max + 20
 
-                    # Draw a green bounding box
                     cv.rectangle(frame, (x_min, y_min), (x_max, y_max), (0, 255, 0), 2)
 
             img = Image.fromarray(frame)
