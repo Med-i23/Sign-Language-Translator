@@ -1,13 +1,15 @@
 import pandas as pd
 import numpy as np
+import seaborn as sns
 from keras.src.models import Sequential
 from keras.src.layers import Dense, Conv2D, Flatten , Dropout , BatchNormalization
 from keras.src.layers.pooling.max_pooling2d import MaxPooling2D
 from keras.src.legacy.preprocessing.image import ImageDataGenerator
 from keras.src.callbacks import ReduceLROnPlateau
+from matplotlib import pyplot as plt
 from sklearn.preprocessing import LabelBinarizer
 from sklearn.utils.class_weight import compute_class_weight
-from sklearn.metrics import classification_report
+from sklearn.metrics import classification_report, confusion_matrix
 
 train_df = pd.read_csv("dataset/sign_mnist_train.csv")
 test_df = pd.read_csv("dataset/sign_mnist_test.csv")
@@ -40,10 +42,10 @@ datagen = ImageDataGenerator(
         featurewise_std_normalization=False,  # divide inputs by std of the dataset
         samplewise_std_normalization=False,  # divide each input by its std
         zca_whitening=False,  # apply ZCA whitening
-        rotation_range=30,  # randomly rotate images in the range (degrees, 0 to 180)
+        rotation_range=30,  # randomly rotate images in the range
         zoom_range = 0.2, # Randomly zoom image
-        width_shift_range=0.2,  # randomly shift images horizontally (fraction of total width)
-        height_shift_range=0.2,  # randomly shift images vertically (fraction of total height)
+        width_shift_range=0.2,  # randomly shift images horizontally
+        height_shift_range=0.2,  # randomly shift images vertically
         horizontal_flip=True,  # randomly flip images
         vertical_flip=False)  # randomly flip images
 
@@ -98,10 +100,51 @@ history = model.fit(datagen.flow(x_train,y_train, batch_size = 128), epochs = 20
 # Save the trained model
 model.save('models/smnist.keras')
 
+
+# ======================================================================================================================
+
+
+# Evaluation
 print("Accuracy of the model is - " , model.evaluate(x_test,y_test)[1]*100 , "%")
 
+
+# Classification report
 y_pred = model.predict(x_test)
 y_pred_classes = y_pred.argmax(axis=1)
 y_true = y_test.argmax(axis=1)
-
 print(classification_report(y_true, y_pred_classes))
+
+
+# Confusion matrix
+cm = confusion_matrix(y_true, y_pred_classes)
+plt.figure(figsize=(10, 8))
+sns.heatmap(cm, annot=True, cmap='Blues', fmt='g',
+             xticklabels=label_binarizer.classes_,
+             yticklabels=label_binarizer.classes_)
+plt.xlabel('Predicted')
+plt.ylabel('Actual')
+plt.title('Confusion Matrix')
+plt.show()
+
+
+# Validation accuracy and loss
+plt.figure(figsize=(12, 4))
+
+# Accuracy plot
+plt.subplot(1, 2, 1)
+plt.plot(history.history['accuracy'], label='Train Accuracy')
+plt.plot(history.history['val_accuracy'], label='Validation Accuracy')
+plt.xlabel('Epochs')
+plt.ylabel('Accuracy')
+plt.legend()
+plt.title('Accuracy Over Epochs')
+
+# Loss plot
+plt.subplot(1, 2, 2)
+plt.plot(history.history['loss'], label='Train Loss')
+plt.plot(history.history['val_loss'], label='Validation Loss')
+plt.xlabel('Epochs')
+plt.ylabel('Loss')
+plt.legend()
+plt.title('Loss Over Epochs')
+plt.show()
