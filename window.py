@@ -36,11 +36,18 @@ class App(tk.Tk):
                                 fg='white')
         self.button.grid(row=1, column=0, padx=10, pady=10, sticky='w')
 
+        self.clear_button = tk.Button(self, text="Clear", command=self.clear_text, font=("Arial", 14), bg='orange', fg='white')
+        self.clear_button.grid(row=1, column=0, padx=150, pady=10, sticky='w')
+
         self.quit_button = tk.Button(self, text="Quit", command=self.quit_app, font=("Arial", 14), bg='red', fg='white')
         self.quit_button.grid(row=1, column=1, padx=10, pady=10, sticky='e')
 
         self.status_bar = tk.Label(self, text="Ready", bg='lightgray', anchor=tk.W)
         self.status_bar.grid(row=2, column=0, columnspan=2, sticky='we')
+
+        # Text Box to display translated letters
+        self.translated_text = tk.Text(self, height=2, font=("Arial", 18))
+        self.translated_text.grid(row=3, column=0, columnspan=2, padx=10, pady=10, sticky='we')
 
         self.hands = mp.solutions.hands.Hands(
             static_image_mode=False,
@@ -52,7 +59,7 @@ class App(tk.Tk):
         self.video_width = 800
         self.video_height = 600
 
-        self.model = load_model("models/smnist.keras")
+        self.model = load_model("models/MNIST/smnist.keras")
 
         self.letterpred = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S',
                            'T', 'U', 'V', 'W', 'X', 'Y']
@@ -93,6 +100,9 @@ class App(tk.Tk):
 
                 self.status_bar.config(text=f"Prediction: {top_letter}, Confidence: {100 * top_confidence:.2f}%")
 
+                # Add predicted letter to the text box
+                self.translated_text.insert(tk.END, top_letter)
+
                 predarrayordered = sorted(predarray, reverse=True)
                 high1, high2, high3 = predarrayordered[:3]
                 for key, value in letter_prediction_dict.items():
@@ -102,6 +112,10 @@ class App(tk.Tk):
                         print(f"Predicted Character 2: {key}, Confidence: {100 * value:.2f}%")
                     elif value == high3:
                         print(f"Predicted Character 3: {key}, Confidence: {100 * value:.2f}%")
+
+    def clear_text(self):
+        # Clear the text box
+        self.translated_text.delete(1.0, tk.END)
 
     def update_video(self):
         success, frame = self.cap.read()

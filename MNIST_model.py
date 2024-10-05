@@ -11,8 +11,8 @@ from sklearn.preprocessing import LabelBinarizer
 from sklearn.utils.class_weight import compute_class_weight
 from sklearn.metrics import classification_report, confusion_matrix
 
-train_df = pd.read_csv("dataset/sign_mnist_train.csv")
-test_df = pd.read_csv("dataset/sign_mnist_test.csv")
+train_df = pd.read_csv("datasets/MNIST/sign_mnist_train.csv")
+test_df = pd.read_csv("datasets/MNIST/sign_mnist_test.csv")
 
 y_train = train_df['label']
 y_test = test_df['label']
@@ -37,9 +37,9 @@ x_train = x_train.reshape(-1,28,28,1)
 x_test = x_test.reshape(-1,28,28,1)
 
 datagen = ImageDataGenerator(
-        featurewise_center=False,  # set input mean to 0 over the dataset
+        featurewise_center=False,  # set input mean to 0 over the datasets
         samplewise_center=False,  # set each sample mean to 0
-        featurewise_std_normalization=False,  # divide inputs by std of the dataset
+        featurewise_std_normalization=False,  # divide inputs by std of the datasets
         samplewise_std_normalization=False,  # divide each input by its std
         zca_whitening=False,  # apply ZCA whitening
         rotation_range=30,  # randomly rotate images in the range
