@@ -17,37 +17,22 @@ class App(tk.Tk):
         super().__init__()
 
         self.title("Sign Language Translator")
-        self.geometry("1080x600")
+        self.geometry("1080x750")
 
-        self.grid_columnconfigure(0, weight=1)
-        self.grid_columnconfigure(1, weight=1)
-        self.grid_rowconfigure(0, weight=1)
-        self.grid_rowconfigure(1, weight=0)
-        self.grid_rowconfigure(2, weight=0)
-        self.grid_rowconfigure(3, weight=0)
+        # Initialize Notebook (Tabs)
+        self.notebook = ttk.Notebook(self)
+        self.notebook.pack(fill=tk.BOTH, expand=True)
 
-        self.video_frame = tk.Frame(self, bg='lightgray')
-        self.video_frame.grid(row=0, column=0, columnspan=2, sticky='nsew')
+        # Create Frames for Tabs
+        self.translator_frame = tk.Frame(self.notebook)
+        self.learning_frame = tk.Frame(self.notebook)
 
-        self.video_label = tk.Label(self.video_frame, bg='lightgray')
-        self.video_label.pack(fill=tk.BOTH, expand=True)
+        # Add Tabs to the Notebook
+        self.notebook.add(self.translator_frame, text="Translator")
+        self.notebook.add(self.learning_frame, text="Learning")
 
-        self.button = tk.Button(self, text="Translate", command=self.on_button_click, font=("Arial", 14), bg='blue',
-                                fg='white')
-        self.button.grid(row=1, column=0, padx=10, pady=10, sticky='w')
-
-        self.clear_button = tk.Button(self, text="Clear", command=self.clear_text, font=("Arial", 14), bg='orange', fg='white')
-        self.clear_button.grid(row=1, column=0, padx=150, pady=10, sticky='w')
-
-        self.quit_button = tk.Button(self, text="Quit", command=self.quit_app, font=("Arial", 14), bg='red', fg='white')
-        self.quit_button.grid(row=1, column=1, padx=10, pady=10, sticky='e')
-
-        self.status_bar = tk.Label(self, text="Ready", bg='lightgray', anchor=tk.W)
-        self.status_bar.grid(row=2, column=0, columnspan=2, sticky='we')
-
-        # Text Box to display translated letters
-        self.translated_text = tk.Text(self, height=2, font=("Arial", 18))
-        self.translated_text.grid(row=3, column=0, columnspan=2, padx=10, pady=10, sticky='we')
+        self.translator_tab()
+        self.learning_tab()
 
         self.hands = mp.solutions.hands.Hands(
             static_image_mode=False,
@@ -66,44 +51,88 @@ class App(tk.Tk):
 
         self.update_video()
 
+    def translator_tab(self):
+        self.translator_frame.grid_columnconfigure(0, weight=1)
+        self.translator_frame.grid_columnconfigure(1, weight=1)
+        self.translator_frame.grid_rowconfigure(0, weight=1)
+        self.translator_frame.grid_rowconfigure(1, weight=0)
+        self.translator_frame.grid_rowconfigure(2, weight=0)
+        self.translator_frame.grid_rowconfigure(3, weight=0)
+
+        # Video Frame
+        self.video_frame = tk.Frame(self.translator_frame, bg='lightgray')
+        self.video_frame.grid(row=0, column=0, columnspan=2, sticky='nsew')
+
+        self.video_label = tk.Label(self.video_frame, bg='lightgray')
+        self.video_label.pack(fill=tk.BOTH, expand=True)
+
+        # Control Buttons
+        self.translate_button = tk.Button(self.translator_frame, text="Translate", command=self.on_button_click,
+                                          font=("Arial", 14), bg='blue', fg='white')
+        self.translate_button.grid(row=1, column=0, padx=10, pady=10, sticky='w')
+
+        self.clear_button = tk.Button(self.translator_frame, text="Clear", command=self.clear_text,
+                                      font=("Arial", 14), bg='orange', fg='white')
+        self.clear_button.grid(row=1, column=0, padx=150, pady=10, sticky='w')
+
+        self.quit_button = tk.Button(self.translator_frame, text="Quit", command=self.quit_app,
+                                     font=("Arial", 14), bg='red', fg='white')
+        self.quit_button.grid(row=1, column=1, padx=10, pady=10, sticky='e')
+
+        self.status_bar = tk.Label(self.translator_frame, text="Ready", bg='lightgray', anchor=tk.W)
+        self.status_bar.grid(row=2, column=0, columnspan=2, sticky='we')
+
+        self.translated_text = tk.Text(self.translator_frame, height=2, font=("Arial", 18))
+        self.translated_text.grid(row=3, column=0, columnspan=2, padx=10, pady=10, sticky='we')
+
+    def learning_tab(self):
+        self.learning_frame.grid_columnconfigure(0, weight=1)
+        self.learning_frame.grid_rowconfigure(0, weight=1)
+
+        self.learning_video_frame = tk.Frame(self.learning_frame, bg='lightgray')
+        self.learning_video_frame.grid(row=0, column=0, sticky='nsew')
+
+        self.learning_video_label = tk.Label(self.learning_video_frame, bg='lightgray')
+        self.learning_video_label.pack(fill=tk.BOTH, expand=True)
+
     def on_button_click(self):
         success, frame = self.cap.read()
         if success:
-            analysisframe = frame
-            framergbanalysis = cv.cvtColor(analysisframe, cv.COLOR_BGR2RGB)
-            resultanalysis = self.hands.process(framergbanalysis)
-            hand_landmarksanalysis = resultanalysis.multi_hand_landmarks
-            if hand_landmarksanalysis:
+            analysis_frame = frame
+            frame_rgb_analysis = cv.cvtColor(analysis_frame, cv.COLOR_BGR2RGB)
+            result_analysis = self.hands.process(frame_rgb_analysis)
+            hand_landmarks_analysis = result_analysis.multi_hand_landmarks
+
+            if hand_landmarks_analysis:
                 h, w, _ = frame.shape
-                for handLMsanalysis in hand_landmarksanalysis:
+                for handLMs_analysis in hand_landmarks_analysis:
                     x_max, y_max = 0, 0
                     x_min, y_min = w, h
-                    for lmanalysis in handLMsanalysis.landmark:
+                    for lmanalysis in handLMs_analysis.landmark:
                         x, y = int(lmanalysis.x * w), int(lmanalysis.y * h)
                         x_min, x_max = min(x, x_min), max(x, x_max)
                         y_min, y_max = min(y, y_min), max(y, y_max)
                     y_min, y_max = y_min - 20, y_max + 20
                     x_min, x_max = x_min - 20, x_max + 20
 
-                analysisframe = cv.cvtColor(analysisframe, cv.COLOR_BGR2GRAY)
-                analysisframe = analysisframe[y_min:y_max, x_min:x_max]
-                analysisframe = cv.resize(analysisframe, (28, 28))
+                analysis_frame = cv.cvtColor(analysis_frame, cv.COLOR_BGR2GRAY)
+                analysis_frame = analysis_frame[y_min:y_max, x_min:x_max]
+                analysis_frame = cv.resize(analysis_frame, (28, 28))
 
-                pixeldata = np.array(analysisframe).reshape(-1, 28, 28, 1) / 255.0
-                prediction = self.model.predict(pixeldata)
+                pixel_data = np.array(analysis_frame).reshape(-1, 28, 28, 1) / 255.0
+                prediction = self.model.predict(pixel_data)
 
-                predarray = np.array(prediction[0])
-                letter_prediction_dict = {self.letterpred[i]: predarray[i] for i in range(len(self.letterpred))}
+                pred_array = np.array(prediction[0])
+                letter_prediction_dict = {self.letterpred[i]: pred_array[i] for i in range(len(self.letterpred))}
 
                 top_letter = max(letter_prediction_dict, key=letter_prediction_dict.get)
                 top_confidence = letter_prediction_dict[top_letter]
 
                 self.status_bar.config(text=f"Prediction: {top_letter}, Confidence: {100 * top_confidence:.2f}%")
 
-                # Add predicted letter to the text box
                 self.translated_text.insert(tk.END, top_letter)
 
-                predarrayordered = sorted(predarray, reverse=True)
+                predarrayordered = sorted(pred_array, reverse=True)
                 high1, high2, high3 = predarrayordered[:3]
                 for key, value in letter_prediction_dict.items():
                     if value == high1:
@@ -113,19 +142,19 @@ class App(tk.Tk):
                     elif value == high3:
                         print(f"Predicted Character 3: {key}, Confidence: {100 * value:.2f}%")
 
+
     def clear_text(self):
-        # Clear the text box
         self.translated_text.delete(1.0, tk.END)
 
     def update_video(self):
         success, frame = self.cap.read()
         if success:
-            frame = cv.cvtColor(frame, cv.COLOR_BGR2RGB)
-            frame = cv.resize(frame, (self.video_width, self.video_height))
+            frame_rgb = cv.cvtColor(frame, cv.COLOR_BGR2RGB)
+            frame_resized = cv.resize(frame_rgb, (self.video_width, self.video_height))
 
-            hands_detected = self.hands.process(frame)
+            hands_detected = self.hands.process(frame_resized)
             if hands_detected.multi_hand_landmarks:
-                h, w, _ = frame.shape
+                h, w, _ = frame_resized.shape
                 for hand_landmarks in hands_detected.multi_hand_landmarks:
                     x_max, y_max = 0, 0
                     x_min, y_min = w, h
@@ -136,15 +165,22 @@ class App(tk.Tk):
                     y_min, y_max = y_min - 20, y_max + 20
                     x_min, x_max = x_min - 20, x_max + 20
 
-                    cv.rectangle(frame, (x_min, y_min), (x_max, y_max), (0, 255, 0), 2)
+                    cv.rectangle(frame_resized, (x_min, y_min), (x_max, y_max), (0, 255, 0), 2)
 
-            img = Image.fromarray(frame)
+            img = Image.fromarray(frame_resized)
             imgtk = ImageTk.PhotoImage(image=img)
-
             self.video_label.imgtk = imgtk
             self.video_label.config(image=imgtk)
 
+            img_learning = Image.fromarray(frame_resized)
+            imgtk_learning = ImageTk.PhotoImage(image=img_learning)
+            self.learning_video_label.imgtk = imgtk_learning
+            self.learning_video_label.config(image=imgtk_learning)
+
         self.after(10, self.update_video)
+
+    def clear_text(self):
+        self.translated_text.delete(1.0, tk.END)
 
     def quit_app(self):
         self.cap.release()
@@ -154,3 +190,5 @@ class App(tk.Tk):
 if __name__ == "__main__":
     app = App()
     app.mainloop()
+
+
