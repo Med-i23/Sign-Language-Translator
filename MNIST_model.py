@@ -98,7 +98,7 @@ class_weights = {i: class_weights[i] for i in range(len(class_weights))}
 history = model.fit(datagen.flow(x_train,y_train, batch_size = 128), epochs = 20, validation_data = (x_test, y_test), class_weight=class_weights, callbacks = [learning_rate_reduction])
 
 # Save the trained model
-model.save('models/smnist.keras')
+model.save('models/MNIST/smnist.keras')
 
 
 # ======================================================================================================================
