@@ -7,6 +7,7 @@ import cv2 as cv
 import mediapipe as mp
 import numpy as np
 import time
+import random
 import pandas as pd
 from keras.src.saving import load_model
 
@@ -19,15 +20,12 @@ class App(tk.Tk):
         self.title("Sign Language Translator")
         self.geometry("1080x750")
 
-        # Initialize Notebook (Tabs)
+        # Notebook
         self.notebook = ttk.Notebook(self)
         self.notebook.pack(fill=tk.BOTH, expand=True)
-
-        # Create Frames for Tabs
+        # Tabs
         self.translator_frame = tk.Frame(self.notebook)
         self.learning_frame = tk.Frame(self.notebook)
-
-        # Add Tabs to the Notebook
         self.notebook.add(self.translator_frame, text="Translator")
         self.notebook.add(self.learning_frame, text="Learning")
 
@@ -50,6 +48,7 @@ class App(tk.Tk):
                            'T', 'U', 'V', 'W', 'X', 'Y']
 
         self.update_video()
+        self.generate_random_letter()
 
     def translator_tab(self):
         self.translator_frame.grid_columnconfigure(0, weight=1)
@@ -87,13 +86,41 @@ class App(tk.Tk):
 
     def learning_tab(self):
         self.learning_frame.grid_columnconfigure(0, weight=1)
+        self.learning_frame.grid_columnconfigure(1, weight=1)
         self.learning_frame.grid_rowconfigure(0, weight=1)
+        self.learning_frame.grid_rowconfigure(1, weight=0)
+        self.learning_frame.grid_rowconfigure(2, weight=0)
 
         self.learning_video_frame = tk.Frame(self.learning_frame, bg='lightgray')
-        self.learning_video_frame.grid(row=0, column=0, sticky='nsew')
+        self.learning_video_frame.grid(row=0, column=0, columnspan=2, sticky='nsew')
 
         self.learning_video_label = tk.Label(self.learning_video_frame, bg='lightgray')
         self.learning_video_label.pack(fill=tk.BOTH, expand=True)
+
+        self.letter_label = tk.Label(self.learning_frame, text="A", font=("Arial", 48), fg="black")
+        self.letter_label.grid(row=1, column=0, padx=10, pady=10, columnspan=2)
+
+        self.learning_translate_button = tk.Button(self.learning_frame, text="Translate", command=self.on_button_click,
+                                                   font=("Arial", 14), bg='blue', fg='white')
+        self.learning_translate_button.grid(row=2, column=0, padx=10, pady=10, sticky='w')
+
+        self.quit_button_learning = tk.Button(self.learning_frame, text="Quit", command=self.quit_app,
+                                              font=("Arial", 14), bg='red', fg='white')
+        self.quit_button_learning.grid(row=2, column=1, padx=10, pady=10, sticky='e')
+
+
+    def generate_random_letter(self):
+        self.current_letter = random.choice(self.letterpred)
+        self.letter_label.config(text=self.current_letter)
+
+
+    def flash_letter(self, color):
+        self.letter_label.config(fg=color, font=("Arial", 48, "bold"))
+        self.after(500, self.reset_letter)
+
+    def reset_letter(self):
+        self.letter_label.config(fg="black", font=("Arial", 48))
+
 
     def on_button_click(self):
         success, frame = self.cap.read()
@@ -143,6 +170,12 @@ class App(tk.Tk):
                         print(f"Predicted Character 3: {key}, Confidence: {100 * value:.2f}%")
 
 
+                if top_letter == self.current_letter:
+                    self.flash_letter('green')
+                    self.after(1000, self.generate_random_letter)
+                else:
+                    self.flash_letter('red')
+
     def clear_text(self):
         self.translated_text.delete(1.0, tk.END)
 
@@ -190,5 +223,3 @@ class App(tk.Tk):
 if __name__ == "__main__":
     app = App()
     app.mainloop()
-
-
