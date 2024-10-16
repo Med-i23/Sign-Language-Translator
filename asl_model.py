@@ -31,7 +31,6 @@ for category in categories:
 
 df = pd.DataFrame({"filename": filenames_list, "category": categories_list})
 
-# Shuffle the dataframe
 df = df.sample(frac=1).reset_index(drop=True)
 
 splitfolders.ratio('datasets/asl_main/asl_alphabet_train/asl_alphabet_train', output='workdir/', seed=1333, ratio=(0.8, 0.1, 0.1))
@@ -81,7 +80,7 @@ model.add(Dropout(0.3))
 model.add(Dense(29, activation='softmax'))
 model.summary()
 
-# Callbacks for early stopping and learning rate reduction
+# Early stopping and learning rate reduction
 early_stopping = EarlyStopping(monitor='val_loss', min_delta=0.001, patience=3, restore_best_weights=True, verbose=1)
 reduce_learning_rate = ReduceLROnPlateau(monitor='val_accuracy', patience=2, factor=0.5, verbose=1)
 
