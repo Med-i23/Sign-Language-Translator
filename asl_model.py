@@ -41,8 +41,8 @@ train_path = 'workdir/train'
 val_path = 'workdir/val'
 test_path = 'workdir/test'
 
-batch = 128
-image_size = 128
+batch = 64
+image_size = 200
 img_channel = 3
 n_classes = 36
 

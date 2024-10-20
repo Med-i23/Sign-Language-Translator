@@ -9,6 +9,7 @@ import numpy as np
 import time
 import random
 import pandas as pd
+import pyttsx3
 from keras.src.saving import load_model
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
@@ -50,6 +51,7 @@ class App(tk.Tk):
         self.update_video()
         self.generate_random_letter()
 
+
     def translator_tab(self):
         self.translator_frame.grid_columnconfigure(0, weight=1)
         self.translator_frame.grid_columnconfigure(1, weight=1)
@@ -69,6 +71,10 @@ class App(tk.Tk):
         self.translate_button = tk.Button(self.translator_frame, text="Translate", command=self.on_button_click,
                                           font=("Arial", 14), bg='blue', fg='white')
         self.translate_button.grid(row=1, column=0, padx=10, pady=10, sticky='w')
+
+        self.speak_button = tk.Button(self.translator_frame, text="Speak", command=self.speak,
+                                          font=("Arial", 14), bg='blue', fg='white')
+        self.speak_button.grid(row=1, column=0, padx=10, pady=10, sticky='w')
 
         self.clear_button = tk.Button(self.translator_frame, text="Clear", command=self.clear_text,
                                       font=("Arial", 14), bg='orange', fg='white')
@@ -107,6 +113,10 @@ class App(tk.Tk):
         self.quit_button_learning = tk.Button(self.learning_frame, text="Quit", command=self.quit_app,
                                               font=("Arial", 14), bg='red', fg='white')
         self.quit_button_learning.grid(row=2, column=1, padx=10, pady=10, sticky='e')
+
+
+    # TODO
+    def speak(self):
 
 
     def generate_random_letter(self):
