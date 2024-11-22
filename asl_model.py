@@ -3,11 +3,14 @@ import numpy as np
 import pandas as pd
 import splitfolders
 import tensorflow as tf
+import matplotlib.pyplot as plt
+import seaborn as sns
 
-from keras.src.legacy.preprocessing.image import ImageDataGenerator
-from keras.src.models import Sequential
-from keras.src.layers import Dense, Conv2D, Dropout, Flatten, MaxPooling2D
-from keras.src.callbacks import EarlyStopping, ReduceLROnPlateau
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, Conv2D, Dropout, Flatten, MaxPooling2D, BatchNormalization
+from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
+from tensorflow.keras.optimizers import Adam
 from sklearn.metrics import classification_report, confusion_matrix
 
 
@@ -33,40 +36,54 @@ df = pd.DataFrame({"filename": filenames_list, "category": categories_list})
 
 df = df.sample(frac=1).reset_index(drop=True)
 
-splitfolders.ratio('datasets/asl_main/asl_alphabet_train/asl_alphabet_train', output='workdir/', seed=1333, ratio=(0.8, 0.1, 0.1))
+# Only run on the first setup, after that comment it out
+# splitfolders.ratio('datasets/asl_main/asl_alphabet_train/asl_alphabet_train', output='workdir/', seed=1333, ratio=(0.8, 0.1, 0.1))
 
-datagen = ImageDataGenerator(rescale=1.0 / 255)
+datagen = ImageDataGenerator(
+    rescale=1.0 / 255,
+    rotation_range=15,
+    width_shift_range=0.1,
+    height_shift_range=0.1,
+    shear_range=0.1,
+    zoom_range=0.1,
+    brightness_range=[0.8, 1.2],
+    horizontal_flip=True,
+    fill_mode='nearest'
+)
+
 
 train_path = 'workdir/train'
 val_path = 'workdir/val'
 test_path = 'workdir/test'
 
-batch = 64
+batch = 32
 image_size = 200
 img_channel = 3
-n_classes = 36
+n_classes = 29
 
 train_data = datagen.flow_from_directory(directory=train_path, target_size=(image_size, image_size), batch_size=batch, class_mode='categorical')
 val_data = datagen.flow_from_directory(directory=val_path, target_size=(image_size, image_size), batch_size=batch, class_mode='categorical')
 test_data = datagen.flow_from_directory(directory=test_path, target_size=(image_size, image_size), batch_size=batch, class_mode='categorical', shuffle=False)
 
-
 model = Sequential()
 # Conv layer 1
 model.add(Conv2D(32, 3, activation='relu', padding='same', input_shape=(image_size, image_size, img_channel)))
 model.add(Conv2D(32, 3, activation='relu', padding='same'))
+model.add(BatchNormalization())
 model.add(MaxPooling2D(padding='same'))
 model.add(Dropout(0.2))
 
 # Conv layer 2
 model.add(Conv2D(64, 3, activation='relu', padding='same'))
 model.add(Conv2D(64, 3, activation='relu', padding='same'))
+model.add(BatchNormalization())
 model.add(MaxPooling2D(padding='same'))
 model.add(Dropout(0.3))
 
 # Conv layer 3
 model.add(Conv2D(128, 3, activation='relu', padding='same'))
 model.add(Conv2D(128, 3, activation='relu', padding='same'))
+model.add(BatchNormalization())
 model.add(Dropout(0.4))
 
 # Fully connected layer
@@ -80,15 +97,21 @@ model.add(Dropout(0.3))
 model.add(Dense(29, activation='softmax'))
 model.summary()
 
-# Early stopping and learning rate reduction
-early_stopping = EarlyStopping(monitor='val_loss', min_delta=0.001, patience=3, restore_best_weights=True, verbose=1)
+# Early stopping, learning rate reduction and Best Model checkpoint
+early_stopping = EarlyStopping(monitor='val_loss', min_delta=0.001, patience=4, restore_best_weights=True, verbose=1)
 reduce_learning_rate = ReduceLROnPlateau(monitor='val_accuracy', patience=2, factor=0.5, verbose=1)
+checkpoint = ModelCheckpoint('models/asl/aslmodel_best.h5', monitor='val_loss', save_best_only=True, verbose=1)
 
 # Model Compilation
-model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+model.compile(optimizer=Adam(learning_rate=1e-4), loss='categorical_crossentropy', metrics=['accuracy'])
 
 # Training the Model
-asl_class = model.fit(train_data, validation_data=val_data, epochs=30, callbacks=[early_stopping, reduce_learning_rate], verbose=1)
+asl_class = model.fit(train_data, validation_data=val_data, epochs=30, callbacks=[early_stopping, reduce_learning_rate, checkpoint], verbose=1)
+
+# Save the model
+model.save('models/asl/aslmodel_final.h5')
+
+#=======================================================================================================================
 
 # Evaluation for train generator
 loss, acc = model.evaluate(train_data, verbose=0)
@@ -100,18 +123,15 @@ loss, acc = model.evaluate(val_data, verbose=0)
 print('The accuracy of the model for validation data is:', acc * 100)
 print('The Loss of the model for validation data is:', loss)
 
-# Prediction and Evaluation on the Test Set
-result = model.predict(test_data, verbose=0)
-y_pred = np.argmax(result, axis=1)
-y_true = test_data.labels
-
 # Evaluation on test set
 loss, acc = model.evaluate(test_data, verbose=0)
 print('The accuracy of the model for testing data is:', acc * 100)
 print('The Loss of the model for testing data is:', loss)
 
+# Prediction and Evaluation on the Test Set
+result = model.predict(test_data, verbose=0)
+y_pred = np.argmax(result, axis=1)
+y_true = test_data.labels
+
 # Classification Report
 print(classification_report(y_true, y_pred, target_names=categories.values()))
-
-# Save the model
-model.save('models/asl/aslmodel.keras')

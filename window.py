@@ -8,9 +8,11 @@ import mediapipe as mp
 import numpy as np
 import time
 import random
+import tensorflow as tf
 import pandas as pd
-import pyttsx3
-from keras.src.saving import load_model
+
+from tensorflow.python.keras.models import load_model
+
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
@@ -117,7 +119,7 @@ class App(tk.Tk):
 
     # TODO
     def speak(self):
-
+        pass
 
     def generate_random_letter(self):
         self.current_letter = random.choice(self.letterpred)
