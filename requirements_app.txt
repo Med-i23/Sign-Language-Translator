@@ -1,3 +1,5 @@
+# pip install -r requirements_app.txt
+
 tensorflow~=2.17.0
 mediapipe
 opencv-python~=4.10.0.84
