@@ -10,6 +10,7 @@ import time
 import random
 import tensorflow as tf
 import pandas as pd
+import keras
 
 from tensorflow.python.keras.models import load_model
 
@@ -45,7 +46,7 @@ class App(tk.Tk):
         self.video_width = 800
         self.video_height = 600
 
-        self.model = load_model("models/MNIST/smnist.keras")
+        self.model = keras.models.load_model("models/asl/currentbest/aslmodel_final_99_5.h5")
 
         self.letterpred = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S',
                            'T', 'U', 'V', 'W', 'X', 'Y']
@@ -74,9 +75,9 @@ class App(tk.Tk):
                                           font=("Arial", 14), bg='blue', fg='white')
         self.translate_button.grid(row=1, column=0, padx=10, pady=10, sticky='w')
 
-        self.speak_button = tk.Button(self.translator_frame, text="Speak", command=self.speak,
-                                          font=("Arial", 14), bg='blue', fg='white')
-        self.speak_button.grid(row=1, column=0, padx=10, pady=10, sticky='w')
+        # self.speak_button = tk.Button(self.translator_frame, text="Speak", command=self.speak,
+        #                                   font=("Arial", 14), bg='blue', fg='white')
+        # self.speak_button.grid(row=1, column=0, padx=10, pady=10, sticky='w')
 
         self.clear_button = tk.Button(self.translator_frame, text="Clear", command=self.clear_text,
                                       font=("Arial", 14), bg='orange', fg='white')
@@ -151,15 +152,23 @@ class App(tk.Tk):
                         x, y = int(lmanalysis.x * w), int(lmanalysis.y * h)
                         x_min, x_max = min(x, x_min), max(x, x_max)
                         y_min, y_max = min(y, y_min), max(y, y_max)
-                    y_min, y_max = y_min - 20, y_max + 20
-                    x_min, x_max = x_min - 20, x_max + 20
 
-                analysis_frame = cv.cvtColor(analysis_frame, cv.COLOR_BGR2GRAY)
-                analysis_frame = analysis_frame[y_min:y_max, x_min:x_max]
-                analysis_frame = cv.resize(analysis_frame, (28, 28))
+                    padding = 50
+                    y_min, y_max = max(0, y_min - padding), min(h, y_max + padding)
+                    x_min, x_max = max(0, x_min - padding), min(w, x_max + padding)
 
-                pixel_data = np.array(analysis_frame).reshape(-1, 28, 28, 1) / 255.0
-                prediction = self.model.predict(pixel_data)
+                analysis_frame = frame_rgb_analysis[y_min:y_max, x_min:x_max]
+                analysis_frame = cv.resize(analysis_frame, (200, 200))
+
+                cv.imshow("Cropped Hand Region", cv.cvtColor(analysis_frame, cv.COLOR_RGB2BGR))
+
+                pixel_data = np.array(analysis_frame).reshape(-1, 200, 200, 3) / 255.0
+
+                try:
+                    prediction = self.model.predict(pixel_data)
+                except Exception as e:
+                    self.status_bar.config(text=f"Error in prediction: {str(e)}")
+                    return
 
                 pred_array = np.array(prediction[0])
                 letter_prediction_dict = {self.letterpred[i]: pred_array[i] for i in range(len(self.letterpred))}
@@ -180,7 +189,6 @@ class App(tk.Tk):
                         print(f"Predicted Character 2: {key}, Confidence: {100 * value:.2f}%")
                     elif value == high3:
                         print(f"Predicted Character 3: {key}, Confidence: {100 * value:.2f}%")
-
 
                 if top_letter == self.current_letter:
                     self.flash_letter('green')

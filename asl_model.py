@@ -11,7 +11,8 @@ from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, Conv2D, Dropout, Flatten, MaxPooling2D, BatchNormalization
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
 from tensorflow.keras.optimizers import Adam
-from sklearn.metrics import classification_report, confusion_matrix
+from sklearn.metrics import classification_report, confusion_matrix, ConfusionMatrixDisplay
+from sklearn.utils.class_weight import compute_class_weight
 
 
 base_path = "datasets/asl_main/asl_alphabet_train/asl_alphabet_train/"
@@ -41,12 +42,12 @@ df = df.sample(frac=1).reset_index(drop=True)
 
 datagen = ImageDataGenerator(
     rescale=1.0 / 255,
-    rotation_range=15,
-    width_shift_range=0.1,
-    height_shift_range=0.1,
-    shear_range=0.1,
-    zoom_range=0.1,
-    brightness_range=[0.8, 1.2],
+    rotation_range=25,
+    width_shift_range=0.2,
+    height_shift_range=0.2,
+    shear_range=0.2,
+    zoom_range=0.2,
+    brightness_range=[0.6, 1.4],
     horizontal_flip=True,
     fill_mode='nearest'
 )
@@ -102,11 +103,17 @@ early_stopping = EarlyStopping(monitor='val_loss', min_delta=0.001, patience=4, 
 reduce_learning_rate = ReduceLROnPlateau(monitor='val_accuracy', patience=2, factor=0.5, verbose=1)
 checkpoint = ModelCheckpoint('models/asl/aslmodel_best.h5', monitor='val_loss', save_best_only=True, verbose=1)
 
+# Class weights
+y_true = test_data.classes
+
+class_weights = compute_class_weight('balanced', classes=np.unique(y_true), y=y_true)
+class_weights = dict(enumerate(class_weights))
+
 # Model Compilation
 model.compile(optimizer=Adam(learning_rate=1e-4), loss='categorical_crossentropy', metrics=['accuracy'])
 
 # Training the Model
-asl_class = model.fit(train_data, validation_data=val_data, epochs=30, callbacks=[early_stopping, reduce_learning_rate, checkpoint], verbose=1)
+asl_class = model.fit(train_data, validation_data=val_data, epochs=30, callbacks=[early_stopping, reduce_learning_rate, checkpoint], verbose=1, class_weight=class_weights)
 
 # Save the model
 model.save('models/asl/aslmodel_final.h5')
@@ -135,3 +142,13 @@ y_true = test_data.labels
 
 # Classification Report
 print(classification_report(y_true, y_pred, target_names=categories.values()))
+
+# Confusion matrix
+cm = confusion_matrix(y_true, y_pred)
+
+plt.figure(figsize=(12, 10))
+sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=categories.values(), yticklabels=categories.values())
+plt.xlabel('Predicted Labels')
+plt.ylabel('True Labels')
+plt.title('Confusion Matrix')
+plt.show()
