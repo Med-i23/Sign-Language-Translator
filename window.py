@@ -195,6 +195,9 @@ class App(tk.Tk):
                     self.after(1000, self.generate_random_letter)
                 else:
                     self.flash_letter('red')
+            else:
+                self.translated_text.insert(tk.END, " ")
+                self.status_bar.config(text="SPACE")
 
     def clear_text(self):
         self.translated_text.delete(1.0, tk.END)
