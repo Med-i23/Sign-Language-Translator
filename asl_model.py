@@ -6,8 +6,12 @@ import tensorflow as tf
 import matplotlib.pyplot as plt
 import seaborn as sns
 
+from datetime import datetime
+
+from keras.layers import GlobalAveragePooling2D
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.keras.models import Sequential
+from tensorflow.keras.applications import ResNet50
 from tensorflow.keras.layers import Dense, Conv2D, Dropout, Flatten, MaxPooling2D, BatchNormalization
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
 from tensorflow.keras.optimizers import Adam
@@ -15,13 +19,36 @@ from sklearn.metrics import classification_report, confusion_matrix, ConfusionMa
 from sklearn.utils.class_weight import compute_class_weight
 
 
+# ==========================Current model changes (to implent or already done)=====================================
+
+# Debugging Order
+
+# Check Data Leakage (set(train_files) & set(val_files))
+# Fix Label Mapping (Duplicate "G" issue)
+# Increase Data Augmentation (rotation_range=30)
+# Adjust Learning Rate (1e-4 initially, then lower)
+# Tune Dropout (0.6 or 0.7)
+# Gradually Fine-Tune (freeze first 100 layers, then lower)
+# Fix Class Weight Calculation
+# Save Final Model Properly
+
+#===================================================================================================
+
+
+
 base_path = "datasets/asl_main/asl_alphabet_train/asl_alphabet_train/"
+
+# New folder for the model and all the data
+base_model_dir = 'models/asl'
+current_time = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+session_dir = os.path.join(base_model_dir, current_time)
+os.makedirs(session_dir, exist_ok=True)
 
 categories = {
     0: "A", 1: "B", 2: "C", 3: "D", 4: "E", 5: "F", 6: "G", 7: "H",
-    8: "I", 9: "G", 10: "K", 11: "L", 12: "M", 13: "N", 14: "O", 15: "P",
+    8: "I", 9: "J", 10: "K", 11: "L", 12: "M", 13: "N", 14: "O", 15: "P",
     16: "Q", 17: "R", 18: "S", 19: "T", 20: "U", 21: "V", 22: "W", 23: "X",
-    24: "Y", 25: "Z", 26: "del", 27: "nothing", 28: "space",
+    24: "Y", 25: "Z", 26: "del", 27: "nothing", 28: "space"
 }
 
 filenames_list = []
@@ -42,12 +69,12 @@ df = df.sample(frac=1).reset_index(drop=True)
 
 datagen = ImageDataGenerator(
     rescale=1.0 / 255,
-    rotation_range=25,
-    width_shift_range=0.2,
-    height_shift_range=0.2,
-    shear_range=0.2,
-    zoom_range=0.2,
-    brightness_range=[0.6, 1.4],
+    rotation_range=30,
+    width_shift_range=0.1,
+    height_shift_range=0.1,
+    shear_range=0.1,
+    zoom_range=0.1,
+    brightness_range=[0.8, 1.2],
     horizontal_flip=True,
     fill_mode='nearest'
 )
@@ -66,84 +93,85 @@ train_data = datagen.flow_from_directory(directory=train_path, target_size=(imag
 val_data = datagen.flow_from_directory(directory=val_path, target_size=(image_size, image_size), batch_size=batch, class_mode='categorical')
 test_data = datagen.flow_from_directory(directory=test_path, target_size=(image_size, image_size), batch_size=batch, class_mode='categorical', shuffle=False)
 
-model = Sequential()
-# Conv layer 1
-model.add(Conv2D(32, 3, activation='relu', padding='same', input_shape=(image_size, image_size, img_channel)))
-model.add(Conv2D(32, 3, activation='relu', padding='same'))
-model.add(BatchNormalization())
-model.add(MaxPooling2D(padding='same'))
-model.add(Dropout(0.2))
+# ResNet model setup
+base_model = ResNet50(weights='imagenet', include_top=False, input_shape=(image_size, image_size, img_channel))
+base_model.trainable = True
+for layer in base_model.layers[:-100]:
+    layer.trainable = False
 
-# Conv layer 2
-model.add(Conv2D(64, 3, activation='relu', padding='same'))
-model.add(Conv2D(64, 3, activation='relu', padding='same'))
-model.add(BatchNormalization())
-model.add(MaxPooling2D(padding='same'))
-model.add(Dropout(0.3))
 
-# Conv layer 3
-model.add(Conv2D(128, 3, activation='relu', padding='same'))
-model.add(Conv2D(128, 3, activation='relu', padding='same'))
-model.add(BatchNormalization())
-model.add(Dropout(0.4))
-
-# Fully connected layer
-model.add(Flatten())
-model.add(Dense(512, activation='relu'))
-model.add(Dropout(0.2))
-model.add(Dense(128, activation='relu'))
-model.add(Dropout(0.3))
-
-# Output layer
-model.add(Dense(29, activation='softmax'))
-model.summary()
-
-# Early stopping, learning rate reduction and Best Model checkpoint
-early_stopping = EarlyStopping(monitor='val_loss', min_delta=0.001, patience=4, restore_best_weights=True, verbose=1)
-reduce_learning_rate = ReduceLROnPlateau(monitor='val_accuracy', patience=2, factor=0.5, verbose=1)
-checkpoint = ModelCheckpoint('models/asl/aslmodel_best.h5', monitor='val_loss', save_best_only=True, verbose=1)
-
-# Class weights
-y_true = test_data.classes
-
-class_weights = compute_class_weight('balanced', classes=np.unique(y_true), y=y_true)
-class_weights = dict(enumerate(class_weights))
+model = Sequential([
+    base_model,
+    GlobalAveragePooling2D(),
+    Dense(256, activation='relu'),
+    BatchNormalization(),
+    Dropout(0.6),
+    Dense(n_classes, activation='softmax')
+])
 
 # Model Compilation
 model.compile(optimizer=Adam(learning_rate=1e-4), loss='categorical_crossentropy', metrics=['accuracy'])
+model.summary()
 
-# Training the Model
-asl_class = model.fit(train_data, validation_data=val_data, epochs=30, callbacks=[early_stopping, reduce_learning_rate, checkpoint], verbose=1, class_weight=class_weights)
+# Callbacks
+checkpoint_path = os.path.join(session_dir, 'resnet50_asl_best.h5')
+early_stopping = EarlyStopping(monitor='val_loss', min_delta=0.001, patience=5, restore_best_weights=True, verbose=1)
+reduce_learning_rate = ReduceLROnPlateau(monitor='val_accuracy', patience=2, factor=0.5, verbose=1)
+checkpoint = ModelCheckpoint(checkpoint_path, monitor='val_loss', save_best_only=True, verbose=1)
+
+# Class Weights
+y_true = train_data.classes
+class_weights = compute_class_weight('balanced', classes=np.unique(y_true), y=y_true)
+class_weights = dict(enumerate(class_weights))
+
+# Training
+history = model.fit(
+    train_data,
+    validation_data=val_data,
+    epochs=30,
+    callbacks=[early_stopping, reduce_learning_rate, checkpoint],
+    verbose=1,
+    class_weight=class_weights
+)
 
 # Save the model
-model.save('models/asl/aslmodel_final.h5')
+# final_model_path = os.path.join(session_dir, 'aslmodel_final.h5')
+# model.save(session_dir, save_format='h5')
 
 #=======================================================================================================================
 
-# Evaluation for train generator
-loss, acc = model.evaluate(train_data, verbose=0)
-print('The accuracy of the model for training data is:', acc * 100)
-print('The Loss of the model for training data is:', loss)
+# Evaluations
 
-# Evaluation for validation generator
-loss, acc = model.evaluate(val_data, verbose=0)
-print('The accuracy of the model for validation data is:', acc * 100)
-print('The Loss of the model for validation data is:', loss)
+evaluation_dir = os.path.join(session_dir, 'evaluation')
+os.makedirs(evaluation_dir, exist_ok=True)
 
-# Evaluation on test set
-loss, acc = model.evaluate(test_data, verbose=0)
-print('The accuracy of the model for testing data is:', acc * 100)
-print('The Loss of the model for testing data is:', loss)
+train_loss, train_acc = model.evaluate(train_data, verbose=0)
+val_loss, val_acc = model.evaluate(val_data, verbose=0)
+test_loss, test_acc = model.evaluate(test_data, verbose=0)
 
-# Prediction and Evaluation on the Test Set
+# Evaluation results to a text file
+evaluation_results_path = os.path.join(evaluation_dir, 'evaluation_results.txt')
+with open(evaluation_results_path, 'w') as f:
+    f.write(f"Training Data:\nAccuracy: {train_acc * 100:.2f}%\nLoss: {train_loss:.4f}\n\n")
+    f.write(f"Validation Data:\nAccuracy: {val_acc * 100:.2f}%\nLoss: {val_loss:.4f}\n\n")
+    f.write(f"Test Data:\nAccuracy: {test_acc * 100:.2f}%\nLoss: {test_loss:.4f}\n\n")
+
+print(f"Evaluation results saved to: {evaluation_results_path}")
+
+# Predict on the test set
 result = model.predict(test_data, verbose=0)
 y_pred = np.argmax(result, axis=1)
 y_true = test_data.labels
 
-# Classification Report
-print(classification_report(y_true, y_pred, target_names=categories.values()))
+# Classification report
+classification_report_path = os.path.join(evaluation_dir, 'classification_report.txt')
+classification_report_str = classification_report(y_true, y_pred, target_names=categories.values(), zero_division=0)
+with open(classification_report_path, 'w') as f:
+    f.write(classification_report_str)
 
-# Confusion matrix
+print(f"Classification report saved to: {classification_report_path}")
+
+# Confusion matrix plot
 cm = confusion_matrix(y_true, y_pred)
 
 plt.figure(figsize=(12, 10))
@@ -151,4 +179,36 @@ sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=categories.values
 plt.xlabel('Predicted Labels')
 plt.ylabel('True Labels')
 plt.title('Confusion Matrix')
-plt.show()
+
+confusion_matrix_path = os.path.join(evaluation_dir, 'confusion_matrix.png')
+plt.savefig(confusion_matrix_path)
+plt.close()
+
+print(f"Confusion matrix saved to: {confusion_matrix_path}")
+
+# Training history plots
+# Accuracy plot
+plt.figure(figsize=(8, 6))
+plt.plot(history.history['accuracy'], label='Training Accuracy')
+plt.plot(history.history['val_accuracy'], label='Validation Accuracy')
+plt.title('Model Accuracy')
+plt.xlabel('Epochs')
+plt.ylabel('Accuracy')
+plt.legend()
+accuracy_plot_path = os.path.join(evaluation_dir, 'accuracy_plot.png')
+plt.savefig(accuracy_plot_path)
+plt.close()
+
+# Loss plot
+plt.figure(figsize=(8, 6))
+plt.plot(history.history['loss'], label='Training Loss')
+plt.plot(history.history['val_loss'], label='Validation Loss')
+plt.title('Model Loss')
+plt.xlabel('Epochs')
+plt.ylabel('Loss')
+plt.legend()
+loss_plot_path = os.path.join(evaluation_dir, 'loss_plot.png')
+plt.savefig(loss_plot_path)
+plt.close()
+
+print(f"Training history plots saved to: {evaluation_dir}")

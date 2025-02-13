@@ -1,3 +1,4 @@
+# Python 10
 # pip install -r requirements_model.txt
 
 tensorflow==2.10.1
