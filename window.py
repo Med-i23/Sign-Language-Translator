@@ -46,7 +46,7 @@ class App(tk.Tk):
         self.video_width = 800
         self.video_height = 600
 
-        self.model = keras.models.load_model("models/asl/currentbest/aslmodel_best.h5")
+        self.model = keras.models.load_model("models/asl/2025-02-07_08-36-48/resnet50_asl_best.h5")
 
         self.letterpred = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S',
                            'T', 'U', 'V', 'W', 'X', 'Y']

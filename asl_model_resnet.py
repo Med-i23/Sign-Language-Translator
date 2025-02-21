@@ -96,9 +96,9 @@ test_data = datagen.flow_from_directory(directory=test_path, target_size=(image_
 # ResNet model setup
 base_model = ResNet50(weights='imagenet', include_top=False, input_shape=(image_size, image_size, img_channel))
 base_model.trainable = True
+
 for layer in base_model.layers[:-100]:
     layer.trainable = False
-
 
 model = Sequential([
     base_model,
