@@ -1,4 +1,3 @@
-
 import os
 import numpy as np
 import pandas as pd
@@ -7,15 +6,22 @@ import tensorflow as tf
 import matplotlib.pyplot as plt
 import seaborn as sns
 
+from datetime import datetime
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, Conv2D, Dropout, Flatten, MaxPooling2D, BatchNormalization
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
 from tensorflow.keras.optimizers import Adam
 from sklearn.metrics import classification_report, confusion_matrix
-
+from sklearn.utils.class_weight import compute_class_weight
 
 base_path = "datasets/asl_main/asl_alphabet_train/asl_alphabet_train/"
+
+# New folder for the model and all the data
+base_model_dir = 'models/asl'
+current_time = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+session_dir = os.path.join(base_model_dir, current_time)
+os.makedirs(session_dir, exist_ok=True)
 
 categories = {
     0: "A", 1: "B", 2: "C", 3: "D", 4: "E", 5: "F", 6: "G", 7: "H",
@@ -67,21 +73,22 @@ val_data = datagen.flow_from_directory(directory=val_path, target_size=(image_si
 test_data = datagen.flow_from_directory(directory=test_path, target_size=(image_size, image_size), batch_size=batch, class_mode='categorical', shuffle=False)
 
 model = Sequential()
-# Conv layer 1
+
+# Convolutional layer 1
 model.add(Conv2D(32, 3, activation='relu', padding='same', input_shape=(image_size, image_size, img_channel)))
 model.add(Conv2D(32, 3, activation='relu', padding='same'))
 model.add(BatchNormalization())
 model.add(MaxPooling2D(padding='same'))
 model.add(Dropout(0.2))
 
-# Conv layer 2
+# Convolutional layer 2
 model.add(Conv2D(64, 3, activation='relu', padding='same'))
 model.add(Conv2D(64, 3, activation='relu', padding='same'))
 model.add(BatchNormalization())
 model.add(MaxPooling2D(padding='same'))
 model.add(Dropout(0.3))
 
-# Conv layer 3
+# Convolutional layer 3
 model.add(Conv2D(128, 3, activation='relu', padding='same'))
 model.add(Conv2D(128, 3, activation='relu', padding='same'))
 model.add(BatchNormalization())
@@ -98,41 +105,105 @@ model.add(Dropout(0.3))
 model.add(Dense(29, activation='softmax'))
 model.summary()
 
-# Early stopping, learning rate reduction and Best Model checkpoint
+
+# Callbacks
+checkpoint_path = os.path.join(session_dir, 'og_cnn_asl_best.h5')
 early_stopping = EarlyStopping(monitor='val_loss', min_delta=0.001, patience=4, restore_best_weights=True, verbose=1)
 reduce_learning_rate = ReduceLROnPlateau(monitor='val_accuracy', patience=2, factor=0.5, verbose=1)
-checkpoint = ModelCheckpoint('models/asl/aslmodel_best.h5', monitor='val_loss', save_best_only=True, verbose=1)
+checkpoint = ModelCheckpoint(checkpoint_path, monitor='val_loss', save_best_only=True, verbose=1)
 
 # Model Compilation
 model.compile(optimizer=Adam(learning_rate=1e-4), loss='categorical_crossentropy', metrics=['accuracy'])
 
+# Class Weights
+y_true = train_data.classes
+class_weights = compute_class_weight('balanced', classes=np.unique(y_true), y=y_true)
+class_weights = dict(enumerate(class_weights))
+
 # Training the Model
-asl_class = model.fit(train_data, validation_data=val_data, epochs=30, callbacks=[early_stopping, reduce_learning_rate, checkpoint], verbose=1)
+history = model.fit(
+    train_data,
+    validation_data=val_data,
+    epochs=30,
+    callbacks=[early_stopping, reduce_learning_rate, checkpoint],
+    verbose=1,
+    class_weight=class_weights
+)
 
 # Save the model
-model.save('models/asl/aslmodel_final.h5')
+# model.save('models/asl/aslmodel_final.h5')
 
 #=======================================================================================================================
 
-# Evaluation for train generator
-loss, acc = model.evaluate(train_data, verbose=0)
-print('The accuracy of the model for training data is:', acc * 100)
-print('The Loss of the model for training data is:', loss)
+# Evaluations
 
-# Evaluation for validation generator
-loss, acc = model.evaluate(val_data, verbose=0)
-print('The accuracy of the model for validation data is:', acc * 100)
-print('The Loss of the model for validation data is:', loss)
+evaluation_dir = os.path.join(session_dir, 'evaluation')
+os.makedirs(evaluation_dir, exist_ok=True)
 
-# Evaluation on test set
-loss, acc = model.evaluate(test_data, verbose=0)
-print('The accuracy of the model for testing data is:', acc * 100)
-print('The Loss of the model for testing data is:', loss)
+train_loss, train_acc = model.evaluate(train_data, verbose=0)
+val_loss, val_acc = model.evaluate(val_data, verbose=0)
+test_loss, test_acc = model.evaluate(test_data, verbose=0)
 
-# Prediction and Evaluation on the Test Set
+# Evaluation results to a text file
+evaluation_results_path = os.path.join(evaluation_dir, 'evaluation_results.txt')
+with open(evaluation_results_path, 'w') as f:
+    f.write(f"Training Data:\nAccuracy: {train_acc * 100:.2f}%\nLoss: {train_loss:.4f}\n\n")
+    f.write(f"Validation Data:\nAccuracy: {val_acc * 100:.2f}%\nLoss: {val_loss:.4f}\n\n")
+    f.write(f"Test Data:\nAccuracy: {test_acc * 100:.2f}%\nLoss: {test_loss:.4f}\n\n")
+
+print(f"Evaluation results saved to: {evaluation_results_path}")
+
+# Predict on the test set
 result = model.predict(test_data, verbose=0)
 y_pred = np.argmax(result, axis=1)
 y_true = test_data.labels
 
-# Classification Report
-print(classification_report(y_true, y_pred, target_names=categories.values()))
+# Classification report
+classification_report_path = os.path.join(evaluation_dir, 'classification_report.txt')
+classification_report_str = classification_report(y_true, y_pred, target_names=categories.values(), zero_division=0)
+with open(classification_report_path, 'w') as f:
+    f.write(classification_report_str)
+
+print(f"Classification report saved to: {classification_report_path}")
+
+# Confusion matrix plot
+cm = confusion_matrix(y_true, y_pred)
+
+plt.figure(figsize=(12, 10))
+sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=categories.values(), yticklabels=categories.values())
+plt.xlabel('Predicted Labels')
+plt.ylabel('True Labels')
+plt.title('Confusion Matrix')
+
+confusion_matrix_path = os.path.join(evaluation_dir, 'confusion_matrix.png')
+plt.savefig(confusion_matrix_path)
+plt.close()
+
+print(f"Confusion matrix saved to: {confusion_matrix_path}")
+
+# Training history plots
+# Accuracy plot
+plt.figure(figsize=(8, 6))
+plt.plot(history.history['accuracy'], label='Training Accuracy')
+plt.plot(history.history['val_accuracy'], label='Validation Accuracy')
+plt.title('Model Accuracy')
+plt.xlabel('Epochs')
+plt.ylabel('Accuracy')
+plt.legend()
+accuracy_plot_path = os.path.join(evaluation_dir, 'accuracy_plot.png')
+plt.savefig(accuracy_plot_path)
+plt.close()
+
+# Loss plot
+plt.figure(figsize=(8, 6))
+plt.plot(history.history['loss'], label='Training Loss')
+plt.plot(history.history['val_loss'], label='Validation Loss')
+plt.title('Model Loss')
+plt.xlabel('Epochs')
+plt.ylabel('Loss')
+plt.legend()
+loss_plot_path = os.path.join(evaluation_dir, 'loss_plot.png')
+plt.savefig(loss_plot_path)
+plt.close()
+
+print(f"Training history plots saved to: {evaluation_dir}")
