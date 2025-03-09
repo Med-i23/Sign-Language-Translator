@@ -1,4 +1,6 @@
 import os
+import gdown
+import zipfile
 import numpy as np
 import pandas as pd
 import splitfolders
@@ -7,14 +9,37 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 from datetime import datetime
+from keras.layers import GlobalAveragePooling2D
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.keras.models import Sequential
+from tensorflow.keras.applications import ResNet50
 from tensorflow.keras.layers import Dense, Conv2D, Dropout, Flatten, MaxPooling2D, BatchNormalization
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
 from tensorflow.keras.optimizers import Adam
-from sklearn.metrics import classification_report, confusion_matrix
+from sklearn.metrics import classification_report, confusion_matrix, ConfusionMatrixDisplay
 from sklearn.utils.class_weight import compute_class_weight
 
+#=Dataset-download=======================================================================================
+
+file_id = "1M02Tyj-I3LLwPKse3QlUrjTHf7DHkjIf"
+output_zip = "asl_dataset.zip"
+output_dir = "datasets/asl_main/"
+
+if not os.path.exists(output_dir):
+    print("Dataset not found locally. Downloading from Google Drive...")
+
+    gdown.download(f"https://drive.google.com/uc?id={file_id}", output_zip, quiet=False)
+
+    print("Extracting dataset...")
+    with zipfile.ZipFile(output_zip, 'r') as zip_ref:
+        zip_ref.extractall("datasets/")
+
+    os.remove(output_zip)
+    print("Complete.")
+else:
+    print("Dataset already exists. Skipping download.")
+
+# =Training===============================================================================================
 base_path = "datasets/asl_main/asl_alphabet_train/asl_alphabet_train/"
 
 # New folder for the model and all the data
@@ -133,9 +158,7 @@ history = model.fit(
 # Save the model
 # model.save('models/asl/aslmodel_final.h5')
 
-#=======================================================================================================================
-
-# Evaluations
+#=Evaluations=============================================================================================================
 
 evaluation_dir = os.path.join(session_dir, 'evaluation')
 os.makedirs(evaluation_dir, exist_ok=True)

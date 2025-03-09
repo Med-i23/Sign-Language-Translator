@@ -1,4 +1,6 @@
 import os
+import gdown
+import zipfile
 import numpy as np
 import pandas as pd
 import splitfolders
@@ -31,10 +33,27 @@ from sklearn.utils.class_weight import compute_class_weight
 # Fix Class Weight Calculation
 # Save Final Model Properly
 
-#===================================================================================================
+#=Dataset-download=======================================================================================
 
+file_id = "1M02Tyj-I3LLwPKse3QlUrjTHf7DHkjIf"
+output_zip = "asl_dataset.zip"
+output_dir = "datasets/asl_main/"
 
+if not os.path.exists(output_dir):
+    print("Dataset not found locally. Downloading from Google Drive...")
 
+    gdown.download(f"https://drive.google.com/uc?id={file_id}", output_zip, quiet=False)
+
+    print("Extracting dataset...")
+    with zipfile.ZipFile(output_zip, 'r') as zip_ref:
+        zip_ref.extractall("datasets/")
+
+    os.remove(output_zip)
+    print("Complete.")
+else:
+    print("Dataset already exists. Skipping download.")
+
+#=Training===============================================================================================
 base_path = "datasets/asl_main/asl_alphabet_train/asl_alphabet_train/"
 
 # New folder for the model and all the data
@@ -137,9 +156,7 @@ history = model.fit(
 # final_model_path = os.path.join(session_dir, 'aslmodel_final.h5')
 # model.save(session_dir, save_format='h5')
 
-#=======================================================================================================================
-
-# Evaluations
+#=Evaluations=============================================================================================================
 
 evaluation_dir = os.path.join(session_dir, 'evaluation')
 os.makedirs(evaluation_dir, exist_ok=True)
