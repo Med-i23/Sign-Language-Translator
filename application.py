@@ -17,12 +17,14 @@ from tensorflow.python.keras.models import load_model
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
+model_path = "models/asl/2025-02-07_08-36-48-USINGTHIS/resnet50_asl_best.h5"
+
 class App(tk.Tk):
     def __init__(self):
         super().__init__()
 
         self.title("Sign Language Translator")
-        self.geometry("1080x750")
+        self.geometry("1080x700")
 
         # Notebook
         self.notebook = ttk.Notebook(self)
@@ -47,7 +49,7 @@ class App(tk.Tk):
         self.video_height = 600
 
         # Load whichever model you want
-        self.model = keras.models.load_model("models/asl/2025-02-07_08-36-48-USINGTHIS/resnet50_asl_best.h5")
+        self.model = keras.models.load_model(model_path)
 
         self.letterpred = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R',
                            'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'del', 'nothing', 'space']
@@ -161,7 +163,7 @@ class App(tk.Tk):
                 analysis_frame = frame_rgb_analysis[y_min:y_max, x_min:x_max]
                 analysis_frame = cv.resize(analysis_frame, (200, 200))
 
-                cv.imshow("Cropped Hand Region", cv.cvtColor(analysis_frame, cv.COLOR_RGB2BGR))
+               # cv.imshow("Cropped Hand Region", cv.cvtColor(analysis_frame, cv.COLOR_RGB2BGR))
 
                 pixel_data = np.array(analysis_frame).reshape(-1, 200, 200, 3) / 255.0
 

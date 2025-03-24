@@ -13,11 +13,25 @@ from keras.layers import GlobalAveragePooling2D
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.applications import ResNet50
-from tensorflow.keras.layers import Dense, Conv2D, Dropout, Flatten, MaxPooling2D, BatchNormalization
+from tensorflow.keras.layers import Dense, Dropout, BatchNormalization
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
 from tensorflow.keras.optimizers import Adam
-from sklearn.metrics import classification_report, confusion_matrix, ConfusionMatrixDisplay
+from sklearn.metrics import classification_report, confusion_matrix
 from sklearn.utils.class_weight import compute_class_weight
+
+
+# ==========================Current model changes (to implent or already done)=====================================
+
+# Debugging Order
+
+# Check Data Leakage (set(train_files) & set(val_files))
+# Fix Label Mapping (Duplicate "G" issue)
+# Increase Data Augmentation (rotation_range=30)
+# Adjust Learning Rate (1e-4 initially, then lower)
+# Tune Dropout (0.6 or 0.7)
+# Gradually Fine-Tune (freeze first 100 layers, then lower)
+# Fix Class Weight Calculation
+# Save Final Model Properly
 
 #=Dataset-download=======================================================================================
 
@@ -39,20 +53,20 @@ if not os.path.exists(output_dir):
 else:
     print("Dataset already exists. Skipping download.")
 
-# =Training===============================================================================================
-base_path = "datasets/asl_main/asl_alphabet_train/asl_alphabet_train/"
+#=Training===============================================================================================
+base_path = "../datasets/asl_main/asl_alphabet_train/asl_alphabet_train/"
 
 # New folder for the model and all the data
-base_model_dir = 'models/asl'
+base_model_dir = 'asl'
 current_time = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
 session_dir = os.path.join(base_model_dir, current_time)
 os.makedirs(session_dir, exist_ok=True)
 
 categories = {
     0: "A", 1: "B", 2: "C", 3: "D", 4: "E", 5: "F", 6: "G", 7: "H",
-    8: "I", 9: "G", 10: "K", 11: "L", 12: "M", 13: "N", 14: "O", 15: "P",
+    8: "I", 9: "J", 10: "K", 11: "L", 12: "M", 13: "N", 14: "O", 15: "P",
     16: "Q", 17: "R", 18: "S", 19: "T", 20: "U", 21: "V", 22: "W", 23: "X",
-    24: "Y", 25: "Z", 26: "del", 27: "nothing", 28: "space",
+    24: "Y", 25: "Z", 26: "del", 27: "nothing", 28: "space"
 }
 
 filenames_list = []
@@ -73,7 +87,7 @@ df = df.sample(frac=1).reset_index(drop=True)
 
 datagen = ImageDataGenerator(
     rescale=1.0 / 255,
-    rotation_range=15,
+    rotation_range=30,
     width_shift_range=0.1,
     height_shift_range=0.1,
     shear_range=0.1,
@@ -84,9 +98,9 @@ datagen = ImageDataGenerator(
 )
 
 
-train_path = 'workdir/train'
-val_path = 'workdir/val'
-test_path = 'workdir/test'
+train_path = '../workdir/train'
+val_path = '../workdir/val'
+test_path = '../workdir/test'
 
 batch = 32
 image_size = 200
@@ -97,55 +111,38 @@ train_data = datagen.flow_from_directory(directory=train_path, target_size=(imag
 val_data = datagen.flow_from_directory(directory=val_path, target_size=(image_size, image_size), batch_size=batch, class_mode='categorical')
 test_data = datagen.flow_from_directory(directory=test_path, target_size=(image_size, image_size), batch_size=batch, class_mode='categorical', shuffle=False)
 
-model = Sequential()
+# ResNet model setup
+base_model = ResNet50(weights='imagenet', include_top=False, input_shape=(image_size, image_size, img_channel))
+base_model.trainable = True
 
-# Convolutional layer 1
-model.add(Conv2D(32, 3, activation='relu', padding='same', input_shape=(image_size, image_size, img_channel)))
-model.add(Conv2D(32, 3, activation='relu', padding='same'))
-model.add(BatchNormalization())
-model.add(MaxPooling2D(padding='same'))
-model.add(Dropout(0.2))
+for layer in base_model.layers[:-100]:
+    layer.trainable = False
 
-# Convolutional layer 2
-model.add(Conv2D(64, 3, activation='relu', padding='same'))
-model.add(Conv2D(64, 3, activation='relu', padding='same'))
-model.add(BatchNormalization())
-model.add(MaxPooling2D(padding='same'))
-model.add(Dropout(0.3))
-
-# Convolutional layer 3
-model.add(Conv2D(128, 3, activation='relu', padding='same'))
-model.add(Conv2D(128, 3, activation='relu', padding='same'))
-model.add(BatchNormalization())
-model.add(Dropout(0.4))
-
-# Fully connected layer
-model.add(Flatten())
-model.add(Dense(512, activation='relu'))
-model.add(Dropout(0.2))
-model.add(Dense(128, activation='relu'))
-model.add(Dropout(0.3))
-
-# Output layer
-model.add(Dense(29, activation='softmax'))
-model.summary()
-
-
-# Callbacks
-checkpoint_path = os.path.join(session_dir, 'og_cnn_asl_best.h5')
-early_stopping = EarlyStopping(monitor='val_loss', min_delta=0.001, patience=4, restore_best_weights=True, verbose=1)
-reduce_learning_rate = ReduceLROnPlateau(monitor='val_accuracy', patience=2, factor=0.5, verbose=1)
-checkpoint = ModelCheckpoint(checkpoint_path, monitor='val_loss', save_best_only=True, verbose=1)
+model = Sequential([
+    base_model,
+    GlobalAveragePooling2D(),
+    Dense(256, activation='relu'),
+    BatchNormalization(),
+    Dropout(0.6),
+    Dense(n_classes, activation='softmax')
+])
 
 # Model Compilation
 model.compile(optimizer=Adam(learning_rate=1e-4), loss='categorical_crossentropy', metrics=['accuracy'])
+model.summary()
+
+# Callbacks
+checkpoint_path = os.path.join(session_dir, 'resnet50_asl_best.h5')
+early_stopping = EarlyStopping(monitor='val_loss', min_delta=0.001, patience=5, restore_best_weights=True, verbose=1)
+reduce_learning_rate = ReduceLROnPlateau(monitor='val_accuracy', patience=2, factor=0.5, verbose=1)
+checkpoint = ModelCheckpoint(checkpoint_path, monitor='val_loss', save_best_only=True, verbose=1)
 
 # Class Weights
 y_true = train_data.classes
 class_weights = compute_class_weight('balanced', classes=np.unique(y_true), y=y_true)
 class_weights = dict(enumerate(class_weights))
 
-# Training the Model
+# Training
 history = model.fit(
     train_data,
     validation_data=val_data,
@@ -156,7 +153,8 @@ history = model.fit(
 )
 
 # Save the model
-# model.save('models/asl/aslmodel_final.h5')
+# final_model_path = os.path.join(session_dir, 'aslmodel_final.h5')
+# model.save(session_dir, save_format='h5')
 
 #=Evaluations=============================================================================================================
 

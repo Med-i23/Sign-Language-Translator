@@ -11,8 +11,8 @@ from sklearn.preprocessing import LabelBinarizer
 from sklearn.utils.class_weight import compute_class_weight
 from sklearn.metrics import classification_report, confusion_matrix
 
-train_df = pd.read_csv("datasets/MNIST/sign_mnist_train.csv")
-test_df = pd.read_csv("datasets/MNIST/sign_mnist_test.csv")
+train_df = pd.read_csv("../datasets/MNIST/sign_mnist_train.csv")
+test_df = pd.read_csv("../datasets/MNIST/sign_mnist_test.csv")
 
 y_train = train_df['label']
 y_test = test_df['label']

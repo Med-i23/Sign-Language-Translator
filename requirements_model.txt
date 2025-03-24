@@ -8,3 +8,5 @@ split-folders
 matplotlib~=3.9.2
 seaborn
 scikit-learn
+gdown
+zipfile
