@@ -12,33 +12,7 @@ from PIL import Image, ImageTk
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
-
-#==Model-downloads======================================================================================================
-
-file_ids = {
-    "resnet50.h5": "1-dRJSRC401mvnm_TtCTBaTpq2ZZiCATd",
-    "og_cnn.h5": "1IDKmRIDm9ocCMDNMoQDgDskkBoTleKMZ",
-}
-
-output_dir = "models/asl/"
-
-os.makedirs(output_dir, exist_ok=True)
-
-for filename, file_id in file_ids.items():
-    output_path = os.path.join(output_dir, filename)
-
-    if not os.path.exists(output_path):
-        print(f"{filename} not found locally. Downloading from Google Drive...")
-
-        gdown.download(f"https://drive.google.com/uc?id={file_id}", output_path, quiet=False)
-
-    else:
-        print(f"{filename} already exists. Skipping download.")
-
-print("Downloads complete.")
-
 #=App===================================================================================================================
-
 model_path = "models/asl/resnet50.h5"
 
 class App(tk.Tk):
