@@ -17,26 +17,6 @@ from tensorflow.keras.optimizers import Adam
 from sklearn.metrics import classification_report, confusion_matrix
 from sklearn.utils.class_weight import compute_class_weight
 
-#=Dataset-download=======================================================================================
-
-file_id = "1M02Tyj-I3LLwPKse3QlUrjTHf7DHkjIf"
-output_zip = "asl_dataset.zip"
-output_dir = "datasets/asl_main/"
-
-if not os.path.exists(output_dir):
-    print("Dataset not found locally. Downloading from Google Drive...")
-
-    gdown.download(f"https://drive.google.com/uc?id={file_id}", output_zip, quiet=False)
-
-    print("Extracting dataset...")
-    with zipfile.ZipFile(output_zip, 'r') as zip_ref:
-        zip_ref.extractall("datasets/")
-
-    os.remove(output_zip)
-    print("Complete.")
-else:
-    print("Dataset already exists. Skipping download.")
-
 # =Training===============================================================================================
 base_path = "../datasets/asl_main/asl_alphabet_train/asl_alphabet_train/"
 
@@ -67,7 +47,7 @@ df = pd.DataFrame({"filename": filenames_list, "category": categories_list})
 df = df.sample(frac=1).reset_index(drop=True)
 
 # Only run on the first setup, after that comment it out
-# splitfolders.ratio('datasets/asl_main/asl_alphabet_train/asl_alphabet_train', output='workdir/', seed=1333, ratio=(0.8, 0.1, 0.1))
+splitfolders.ratio('datasets/asl_main/asl_alphabet_train/asl_alphabet_train', output='workdir/', seed=1333, ratio=(0.8, 0.1, 0.1))
 
 datagen = ImageDataGenerator(
     rescale=1.0 / 255,
