@@ -74,10 +74,6 @@ class App(tk.Tk):
                                           font=("Arial", 14), bg='blue', fg='white')
         self.translate_button.grid(row=1, column=0, padx=10, pady=10, sticky='w')
 
-        # self.speak_button = tk.Button(self.translator_frame, text="Speak", command=self.speak,
-        #                                   font=("Arial", 14), bg='blue', fg='white')
-        # self.speak_button.grid(row=1, column=0, padx=10, pady=10, sticky='w')
-
         self.clear_button = tk.Button(self.translator_frame, text="Clear", command=self.clear_text,
                                       font=("Arial", 14), bg='orange', fg='white')
         self.clear_button.grid(row=1, column=0, padx=150, pady=10, sticky='w')
@@ -117,10 +113,6 @@ class App(tk.Tk):
         self.quit_button_learning.grid(row=2, column=1, padx=10, pady=10, sticky='e')
 
 
-    # TODO
-    def speak(self):
-        pass
-
     def generate_random_letter(self):
         self.current_letter = random.choice(self.letterpred)
         self.letter_label.config(text=self.current_letter)
@@ -158,8 +150,6 @@ class App(tk.Tk):
 
                 analysis_frame = frame_rgb_analysis[y_min:y_max, x_min:x_max]
                 analysis_frame = cv.resize(analysis_frame, (200, 200))
-
-               # cv.imshow("Cropped Hand Region", cv.cvtColor(analysis_frame, cv.COLOR_RGB2BGR))
 
                 pixel_data = np.array(analysis_frame).reshape(-1, 200, 200, 3) / 255.0
 
