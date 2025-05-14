@@ -46,8 +46,13 @@ df = pd.DataFrame({"filename": filenames_list, "category": categories_list})
 
 df = df.sample(frac=1).reset_index(drop=True)
 
-# Only run on the first setup, after that comment it out
-splitfolders.ratio('datasets/asl_main/asl_alphabet_train/asl_alphabet_train', output='workdir/', seed=1333, ratio=(0.8, 0.1, 0.1))
+
+workdir = "workdir/train"
+
+if not os.path.exists(workdir) or not any(os.scandir(workdir)):
+    splitfolders.ratio('datasets/asl_main/asl_alphabet_train/asl_alphabet_train', output='workdir/', seed=1333, ratio=(0.8, 0.1, 0.1))
+else:
+    print("Workfiles already exist. Skipping splitting.")
 
 datagen = ImageDataGenerator(
     rescale=1.0 / 255,
