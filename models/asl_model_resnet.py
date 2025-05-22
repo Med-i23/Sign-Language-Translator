@@ -20,7 +20,7 @@ from sklearn.metrics import classification_report, confusion_matrix
 from sklearn.utils.class_weight import compute_class_weight
 
 #=Training===============================================================================================
-base_path = "../datasets/asl_main/asl_alphabet_train/asl_alphabet_train/"
+base_path = "datasets/asl_main/asl_alphabet_train/asl_alphabet_train/"
 
 # New folder for the model and all the data
 base_model_dir = 'asl'
@@ -69,9 +69,9 @@ datagen = ImageDataGenerator(
 )
 
 
-train_path = '../workdir/train'
-val_path = '../workdir/val'
-test_path = '../workdir/test'
+train_path = 'workdir/train'
+val_path = 'workdir/val'
+test_path = 'workdir/test'
 
 batch = 32
 image_size = 200
